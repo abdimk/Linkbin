@@ -1,0 +1,10 @@
+! install all requirements first 
+
+
+uvicorn linkbin-backend.main:app --reload
+
+
+
+then run the frontend
+
+npm run dev

@@ -8,18 +8,28 @@ import os
 
 app = FastAPI()
 
-# 1. Define Origins
-origins = [
-    "https://linkbin-front-end.vercel.app",
-    "http://localhost:3000",
-    "https://linkbin-5zr4.vercel.app",
-    "https://vercel.com/abdisa-s-projects/linkbin-front-end/FZXDiYfjgTexrYt2F1F74MyWT3eA"
-]
+# 1. Define Origins - Allow all origins from environment variable or use defaults
+# Get allowed origins from environment variable, or use a list of common origins
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if allowed_origins_env:
+    origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+else:
+    # Default origins for development and known production URLs
+    origins = [
+        "https://linkbin-front-end.vercel.app",
+        "http://localhost:3000",
+        "https://linkbin-5zr4.vercel.app",
+    ]
+
+# For Vercel deployments, allow all Vercel preview URLs
+# This regex pattern will match any Vercel deployment URL
+allow_origin_regex = r"https://.*\.vercel\.app"
 
 # 2. Add Middleware (This handles OPTIONS requests automatically)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins, 
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
