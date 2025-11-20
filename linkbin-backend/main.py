@@ -10,6 +10,7 @@ app = FastAPI()
 origins = [
     "https://linkbin-front-end.vercel.app",
     "http://localhost:3000",  # for dev
+    "https://linkbin-5zr4.vercel.app"
 ]
 
 app.add_middleware(
