@@ -6,15 +6,19 @@ import jwt
 
 app = FastAPI()
 
-# Enable CORS for frontend
+# Allow your frontend URL(s)
+origins = [
+    "https://linkbin-front-end.vercel.app",
+    "http://localhost:3000",  # for dev
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://linkbin-front-end.vercel.app/"],  # Change to your frontend URL in production
+    allow_origins=origins,  # or ["*"] for testing (not for production)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # JWT Authentication dependency
 def get_current_user(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
