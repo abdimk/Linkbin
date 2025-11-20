@@ -12,7 +12,8 @@ app = FastAPI()
 origins = [
     "https://linkbin-front-end.vercel.app",
     "http://localhost:3000",
-    "https://linkbin-5zr4.vercel.app"
+    "https://linkbin-5zr4.vercel.app",
+    "https://vercel.com/abdisa-s-projects/linkbin-front-end/FZXDiYfjgTexrYt2F1F74MyWT3eA"
 ]
 
 # 2. Add Middleware (This handles OPTIONS requests automatically)
