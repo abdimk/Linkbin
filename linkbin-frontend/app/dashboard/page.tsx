@@ -1,6 +1,7 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase"
+import { supabase } from "../../lib/supabase";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 
@@ -15,32 +16,52 @@ export default function Dashboard() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [session, setSession] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const router = useRouter();
 
+  // Check user session on mount
   useEffect(() => {
-    supabase.auth.getSession().then((res) => {
-      if (!res.data.session) router.push("/login");
-      else setSession(res.data.session);
-    });
-  }, []);
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        router.push("/login");
+      } else {
+        setSession(data.session);
+      }
+    };
+    getSession();
+  }, [router]);
 
+  // Fetch links when session is ready
   useEffect(() => {
     if (session) fetchLinks();
   }, [session]);
 
   const fetchLinks = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/links`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       setLinks(res.data);
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load links");
+    } finally {
+      setLoading(false);
     }
   };
 
   const addLink = async () => {
-    if (!title || !url) return alert("Fill both fields");
+    if (!title || !url) {
+      setError("Please fill in both fields");
+      return;
+    }
+    setLoading(true);
+    setError(null);
     try {
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/links`,
@@ -50,8 +71,11 @@ export default function Dashboard() {
       setTitle("");
       setUrl("");
       fetchLinks();
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to add link");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,6 +97,7 @@ export default function Dashboard() {
           </button>
         </div>
 
+        {/* Add Link Form */}
         <div className="flex gap-2 mb-6">
           <input
             placeholder="Title"
@@ -89,20 +114,37 @@ export default function Dashboard() {
           <button
             onClick={addLink}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+            disabled={loading}
           >
-            Add
+            {loading ? "Adding..." : "Add"}
           </button>
         </div>
 
-        <ul className="space-y-2">
-          {links.map((link) => (
-            <li key={link.id} className="p-2 border rounded hover:bg-gray-100 transition">
-              <a href={link.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">
-                {link.title}
-              </a>
-            </li>
-          ))}
-        </ul>
+        {/* Error */}
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+
+        {/* Links List */}
+        {loading && !links.length ? (
+          <p>Loading links...</p>
+        ) : (
+          <ul className="space-y-2">
+            {links.map((link) => (
+              <li
+                key={link.id}
+                className="p-2 border rounded hover:bg-gray-100 transition"
+              >
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-500 hover:underline"
+                >
+                  {link.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
