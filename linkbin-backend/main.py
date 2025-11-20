@@ -1,67 +1,71 @@
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Depends,Request
 from fastapi.responses import JSONResponse
 from supabase_client import supabase
+from pydantic import BaseModel
 import jwt
+import os
 
 app = FastAPI()
 
-# Allow your frontend URL(s)
+# 1. Define Origins
 origins = [
     "https://linkbin-front-end.vercel.app",
-    "http://localhost:3000",  # for dev
+    "http://localhost:3000",
     "https://linkbin-5zr4.vercel.app"
 ]
 
+# 2. Add Middleware (This handles OPTIONS requests automatically)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # or ["*"] for testing (not for production)
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.options("/{rest_of_path:path}")
-async def options_handler(rest_of_path: str, request: Request):
-    return JSONResponse(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "https://linkbin-front-end.vercel.app",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type",
-        },
-        content={}
-    )
-# JWT Authentication dependency
+# --- REMOVED MANUAL OPTIONS HANDLER HERE ---
+
+# 3. Safer JWT Dependency
+# Note: In a real Supabase setup, you should verify the signature using your JWT Secret.
+# For now, we will keep your logic but ensure it catches errors gracefully.
 def get_current_user(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
+    
     token = authorization.split(" ")[1]
     try:
-        payload = jwt.decode(token, options={"verify_signature": False})
+        #Ideally, verify_signature should be True and pass the SUPABASE_JWT_SECRET
+        payload = jwt.decode(token, options={"verify_signature": False}) 
         return payload
-    except Exception:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    except Exception as e:
+        print(f"Auth Error: {e}") # Print error to Vercel logs
+        raise HTTPException(status_code=401, detail="Invalid Token")
 
 # GET /api/links
 @app.get("/api/links")
 def get_links(user=Depends(get_current_user)):
-    data = supabase.table("links").select("*").eq("user_id", user["sub"]).execute()
-    return data.data
-
-# POST /api/links
-from pydantic import BaseModel
+    try:
+        response = supabase.table("links").select("*").eq("user_id", user["sub"]).execute()
+        return response.data
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 class LinkCreate(BaseModel):
     title: str
     url: str
 
+# POST /api/links
 @app.post("/api/links")
 def create_link(link: LinkCreate, user=Depends(get_current_user)):
-    response = supabase.table("links").insert({
-        "user_id": user["sub"],
-        "title": link.title,
-        "url": link.url
-    }).execute()
-    return response.data
+    try:
+        response = supabase.table("links").insert({
+            "user_id": user["sub"],
+            "title": link.title,
+            "url": link.url
+        }).execute()
+        return response.data
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
