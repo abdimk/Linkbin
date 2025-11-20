@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Depends
+from fastapi import Depends,Request
+from fastapi.responses import JSONResponse
 from supabase_client import supabase
 import jwt
 
@@ -20,6 +21,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.options("/{rest_of_path:path}")
+async def options_handler(rest_of_path: str, request: Request):
+    return JSONResponse(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "https://linkbin-front-end.vercel.app",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        },
+        content={}
+    )
 # JWT Authentication dependency
 def get_current_user(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
